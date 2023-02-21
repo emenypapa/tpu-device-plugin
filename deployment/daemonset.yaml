@@ -14,6 +14,7 @@ spec:
       labels:
         name: tpu-device-plugin-ds
     spec:
+      hostNetwork: true
       tolerations:
         - key: eicas.com/tpu
           operator: Exists
@@ -22,9 +23,6 @@ spec:
       containers:
         - image: eicas/tpu-device-plugin:v0.1.0
           name: tpu-device-plugin-ctr
-          env:
-            - name: FAIL_ON_INIT_ERROR
-              value: "false"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
