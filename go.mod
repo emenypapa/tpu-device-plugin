@@ -5,6 +5,7 @@ go 1.18
 require k8s.io/kubelet v0.26.1
 
 require (
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect

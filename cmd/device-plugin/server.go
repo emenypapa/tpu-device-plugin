@@ -89,12 +89,12 @@ func (t *tpuDevicePlugin) Stop() error {
 }
 
 // start the grpc sever and register the device plugin to Kubelet
-func (t *tpuDevicePlugin) Serve() error {
+func (t *tpuDevicePlugin) Serve() (error, bool) {
 	// Create a gRPC server and register the device plugin service.
 	err := t.Start()
 	if err != nil {
 		log.Printf("Could not start device plugin: %s", err)
-		return err
+		return err, false
 	}
 	log.Println("eicas device plugin starting on ", t.socket)
 
@@ -104,10 +104,10 @@ func (t *tpuDevicePlugin) Serve() error {
 	if err != nil {
 		log.Printf("Could NOT register eicas device plugin: %s", err)
 		t.Stop()
-		return err
+		return err, false
 	}
 	log.Println("Registered device plugin to Kubelet")
-	return nil
+	return nil, true
 }
 
 // establishes the grpc with the registered device plugin
