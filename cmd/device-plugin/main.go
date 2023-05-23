@@ -36,7 +36,7 @@ restart:
 	if err != nil {
 		log.Println("Could not contact Kubelet, Need Support!!")
 	}
-	if restartTime {
+	if !restartTime {
 		log.Printf("Failed to start one or more plugins. Retrying in 30s...")
 		restartTimeout = time.After(30 * time.Second)
 	}
