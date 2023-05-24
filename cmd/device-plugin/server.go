@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"path"
 	"time"
@@ -19,7 +21,7 @@ const (
 	serverSock   = pluginapi.DevicePluginPath + "eicas.sock"
 )
 
-type tpuDevicePlugin struct {
+type TpuDevicePlugin struct {
 	devices []*pluginapi.Device
 	stopCh  chan interface{}
 	socket  string
@@ -27,8 +29,8 @@ type tpuDevicePlugin struct {
 }
 
 // how many tpu will to be allocated
-func NewTPUDevicePlugin(number int) *tpuDevicePlugin {
-	return &tpuDevicePlugin{
+func NewTPUDevicePlugin(number int) *TpuDevicePlugin {
+	return &TpuDevicePlugin{
 		devices: getDevices(number),
 		stopCh:  make(chan interface{}),
 		socket:  serverSock,
@@ -36,30 +38,30 @@ func NewTPUDevicePlugin(number int) *tpuDevicePlugin {
 }
 
 // GetDevicePluginOptions returns the values of the optional settings for this plugin, NOT BE USED
-func (t *tpuDevicePlugin) GetDevicePluginOptions(context.Context, *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
+func (t *TpuDevicePlugin) GetDevicePluginOptions(context.Context, *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
 	return &pluginapi.DevicePluginOptions{}, nil
 }
 
 // PreStartContainer is unimplemented for this plugin， NOT BE USED
-func (t *tpuDevicePlugin) PreStartContainer(context.Context, *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
+func (t *TpuDevicePlugin) PreStartContainer(context.Context, *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
 	return &pluginapi.PreStartContainerResponse{}, nil
 }
 
 // GetPreferredAllocation returns the preferred allocation from the set of devices specified in the request, NOT BE USED
-func (p *tpuDevicePlugin) GetPreferredAllocation(ctx context.Context, r *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+func (p *TpuDevicePlugin) GetPreferredAllocation(ctx context.Context, r *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
 	response := &pluginapi.PreferredAllocationResponse{}
 	return response, nil
 }
 
 // clean up the unix socket file
-func (t *tpuDevicePlugin) cleanup() error {
+func (t *TpuDevicePlugin) cleanup() error {
 	if err := os.Remove(t.socket); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
 }
 
-func (t *tpuDevicePlugin) Register(endpoint, resourceName string) error {
+func (t *TpuDevicePlugin) Register(endpoint, resourceName string) error {
 	conn, err := dial(endpoint, 5*time.Second)
 	defer conn.Close()
 	if err != nil {
@@ -78,7 +80,7 @@ func (t *tpuDevicePlugin) Register(endpoint, resourceName string) error {
 	return nil
 }
 
-func (t *tpuDevicePlugin) Stop() error {
+func (t *TpuDevicePlugin) Stop() error {
 	if t.server == nil {
 		return nil
 	}
@@ -89,7 +91,7 @@ func (t *tpuDevicePlugin) Stop() error {
 }
 
 // start the grpc sever and register the device plugin to Kubelet
-func (t *tpuDevicePlugin) Serve() (error, bool) {
+func (t *TpuDevicePlugin) Serve() (error, bool) {
 	// Create a gRPC server and register the device plugin service.
 	err := t.Start()
 	if err != nil {
@@ -131,7 +133,7 @@ func dial(unixSocketPath string, timeout time.Duration) (c *grpc.ClientConn, err
 }
 
 // start the grpc server of my device plugin
-func (t *tpuDevicePlugin) Start() error {
+func (t *TpuDevicePlugin) Start() error {
 	err := t.cleanup()
 	if err != nil {
 		return err
@@ -155,7 +157,7 @@ func (t *tpuDevicePlugin) Start() error {
 }
 
 // ListAndWatch lists devices and update that list according to the health status( NEED tpu lib support)
-func (t *tpuDevicePlugin) ListAndWatch(empty *pluginapi.Empty, stream pluginapi.DevicePlugin_ListAndWatchServer) error {
+func (t *TpuDevicePlugin) ListAndWatch(empty *pluginapi.Empty, stream pluginapi.DevicePlugin_ListAndWatchServer) error {
 	// send the current device list to kubelet
 	resp := new(pluginapi.ListAndWatchResponse)
 	resp.Devices = t.devices
@@ -174,7 +176,7 @@ func (t *tpuDevicePlugin) ListAndWatch(empty *pluginapi.Empty, stream pluginapi.
 }
 
 // Allocate which return list of devices.
-func (t *tpuDevicePlugin) Allocate(ctx context.Context, req *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+func (t *TpuDevicePlugin) Allocate(ctx context.Context, req *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
 	log.Printf("Received Allocate request %+v", req)
 	responses := pluginapi.AllocateResponse{}
 	// allocate a device only if it is available
@@ -197,4 +199,22 @@ func (t *tpuDevicePlugin) Allocate(ctx context.Context, req *pluginapi.AllocateR
 		responses.ContainerResponses = append(responses.ContainerResponses, response)
 	}
 	return &responses, nil
+}
+
+type Data struct {
+	ResourceName string `json:"resource_name"`
+	Capacity     string `json:"capacity"`
+	Allocated    string `json:"allocated"`
+}
+
+func (t *TpuDevicePlugin) ImportData(ctx *gin.Context) {
+	appG := Gin{C: ctx}
+
+	var data = Data{
+		ResourceName: resourceName,
+		Capacity:     "1",
+		Allocated:    "0",
+	}
+	appG.Response(http.StatusOK, SUCCESS, data)
+	return
 }
