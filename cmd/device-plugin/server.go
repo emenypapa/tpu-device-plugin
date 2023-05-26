@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"path"
 	"time"
@@ -201,20 +199,20 @@ func (t *TpuDevicePlugin) Allocate(ctx context.Context, req *pluginapi.AllocateR
 	return &responses, nil
 }
 
-type Data struct {
-	ResourceName string `json:"resource_name"`
-	Capacity     string `json:"capacity"`
-	Allocated    string `json:"allocated"`
-}
-
-func (t *TpuDevicePlugin) ImportData(ctx *gin.Context) {
-	appG := Gin{C: ctx}
-
-	var data = Data{
-		ResourceName: resourceName,
-		Capacity:     "1",
-		Allocated:    "0",
-	}
-	appG.Response(http.StatusOK, SUCCESS, data)
-	return
-}
+//type Data struct {
+//	ResourceName string `json:"resource_name"`
+//	Capacity     string `json:"capacity"`
+//	Allocated    string `json:"allocated"`
+//}
+//
+//func (t *TpuDevicePlugin) ImportData(ctx *gin.Context) {
+//	appG := Gin{C: ctx}
+//
+//	var data = Data{
+//		ResourceName: resourceName,
+//		Capacity:     "1",
+//		Allocated:    "0",
+//	}
+//	appG.Response(http.StatusOK, SUCCESS, data)
+//	return
+//}
